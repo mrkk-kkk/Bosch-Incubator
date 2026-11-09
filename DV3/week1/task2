@@ -1,1 +1,79 @@
+module Arty_Z7_test_top #(
+		parameter purpouse  = "synthesis") 
+	(
+		// Clock definition
+		input logic			sys_clk_125,	
+		input logic [1:0]	sw,
+		input logic [3:0]	btn,
+		output logic		led0_r,
+		output logic		led0_g,
+		output logic		led0_b,
+		output logic		led1_r,
+		output logic		led1_g,
+		output logic		led1_b,
+		output [3:0]		led);
 
+
+	alias LD0 = led[0];
+	alias LD1 = led[1];
+	alias LD2 = led[2];
+	alias LD3 = led[3];
+	
+	logic      [3:0] led_state;
+	logic      [3:0] btn_prev;
+
+	logic 		led_100_pcent;
+	logic 		led_60_pcent;
+	logic 		led_30_pcent;
+	logic 		led_0_pcent;
+	logic 		led_dim;
+
+	// Instantiation of the clocking network
+	//--------------------------------------
+	clk_wiz_0 clknetwork (
+		// Clock out ports
+		.clk_out1           (clk_100),
+		.clk_out2           (clk_100_dutycyc_35),
+		// Status and control signals
+		.reset              (btn[0]),
+		// Clock in ports
+		.clk_in1            (sys_clk_125)
+	);
+
+	//---------------------------------------------------------------------------------------------------------------------------
+	// General purpouse
+	//---------------------------------------------------------------------------------------------------------------------------
+	assign led_100_pcent = 1'b1;
+	assign led_60_pcent = ~clk_100_dutycyc_35;
+	assign led_30_pcent = clk_100_dutycyc_35;
+	assign led_0_pcent = 1'b0;
+
+	assign {led0_r, led0_g, led0_b} = sw[0] ?
+			btn[1] ? {led_100_pcent, led_30_pcent, led_0_pcent} :
+			btn[2] ? {led_0_pcent, led_100_pcent, led_100_pcent} :
+					{led_100_pcent, led_0_pcent, led_100_pcent} :
+			btn[1] ? {led_100_pcent, led_60_pcent, led_0_pcent} :
+			btn[2] ? {led_0_pcent, led_100_pcent, led_30_pcent} :
+					{led_30_pcent, led_0_pcent, led_100_pcent};
+
+	assign {led1_r, led1_g, led1_b} = sw[1] ?
+			btn[1] ? {led_60_pcent, led_30_pcent, led_0_pcent} :
+			btn[2] ? {led_0_pcent, led_60_pcent, led_30_pcent} :
+					{led_100_pcent, led_0_pcent, led_30_pcent} :
+			btn[1] ? {led_100_pcent, led_100_pcent, led_0_pcent} :
+			btn[2] ? {led_60_pcent, led_60_pcent, led_30_pcent} :
+					{led_30_pcent, led_30_pcent, led_100_pcent};
+
+
+always_ff @(posedge clk_100) begin
+    btn_prev <= btn;
+    for (int i = 0; i < 4; i++) begin
+        if (btn[i] & ~btn_prev[i])
+            led_state[i] <= ~led_state[i];
+    end
+end
+
+assign led = led_state;
+	
+
+endmodule
